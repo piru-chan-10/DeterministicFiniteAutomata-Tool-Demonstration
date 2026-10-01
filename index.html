@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<!--
+  ============================================================
+  DFA EDITOR — index.html
+  ============================================================
+  This is the entry point / markup for the Deterministic
+  Finite Automaton (DFA) visual editor.
+
+  Structure overview:
+    1. <head>  — meta tags, title, Google Font, stylesheet
+    2. <body>
+       ├── #app-wrapper          — full-page flex container
+       │   ├── #sidebar          — left panel (states list, transitions list, test panel)
+       │   ├── #main-area        — central column
+       │   │   ├── #toolbar      — mode buttons + action buttons
+       │   │   └── #canvas-wrap  — SVG canvas where the DFA is drawn
+       │   └── (modals are appended here by JS when needed)
+       └── <script>              — loads script.js after DOM is ready
+
+  Key concepts of a DFA modelled here:
+    • State  — a node (circle) on the canvas; can be initial and/or accepting
+    • Transition — a directed edge (arrow) between two states labelled by a symbol
+    • Alphabet — the set of all symbols used in transitions
+    • Simulation — feed an input string and watch the DFA step through states
+  ============================================================
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Page title shown in browser tab -->
+  <title>DFA Editor — Visual Finite Automaton Builder</title>
+
+  <!-- SEO meta description -->
+  <meta name="description"
+        content="Interactive visual DFA editor: draw states, add transitions, and simulate string acceptance." />
+
+  <!-- Google Font: Inter for clean, modern typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet" />
+
+  <!-- Main stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+<!-- ============================================================
+     #app-wrapper
+     Root flex container that fills the entire viewport.
+     Children: sidebar | main-area
+     ============================================================ -->
+<div id="app-wrapper">
+
+  <!-- ============================================================
+       LEFT SIDEBAR
+       Contains three collapsible sections:
+         1. States list
+         2. Transitions list
+         3. Test / Simulate panel
+       ============================================================ -->
+  <aside id="sidebar">
+
+    <!-- Sidebar brand / logo -->
+    <div id="sidebar-brand">
+      <span class="brand-icon">⬡</span>
+      <span class="brand-text">DFA Editor</span>
+    </div>
+
+    <!-- ── Section 1: States ────────────────────────── -->
+    <section class="sidebar-section" id="section-states">
+      <h2 class="section-title">
+        <span>States</span>
+        <!-- Badge showing total state count; updated by JS -->
+        <span class="badge" id="badge-states">0</span>
+      </h2>
+
+      <!-- Scrollable list; <li> elements injected by JS -->
+      <ul class="item-list" id="states-list">
+        <!-- JS renders: <li class="state-item" data-id="..."> -->
+      </ul>
+    </section>
+
+    <!-- ── Section 2: Transitions ───────────────────── -->
+    <section class="sidebar-section" id="section-transitions">
+      <h2 class="section-title">
+        <span>Transitions</span>
+        <span class="badge" id="badge-transitions">0</span>
+      </h2>
+
+      <!-- Scrollable list; <li> elements injected by JS -->
+      <ul class="item-list" id="transitions-list">
+        <!-- JS renders: <li class="trans-item" data-id="..."> -->
+      </ul>
+    </section>
+
+    <!-- ── Section 3: Simulate ──────────────────────── -->
+    <section class="sidebar-section" id="section-simulate">
+      <h2 class="section-title">Simulate</h2>
+
+      <!-- Input string the user wants to test -->
+      <label class="input-label" for="sim-input">Input String</label>
+      <input id="sim-input"
+             class="text-input"
+             type="text"
+             placeholder="e.g. abba"
+             autocomplete="off" />
+
+      <!-- Action buttons for simulation -->
+      <div class="sim-buttons">
+        <button id="btn-simulate" class="btn btn-primary" title="Run full simulation">
+          ▶ Run
+        </button>
+        <button id="btn-step" class="btn btn-secondary" title="Advance one symbol at a time">
+          ⏭ Step
+        </button>
+        <button id="btn-reset-sim" class="btn btn-ghost" title="Reset simulation state">
+          ↺ Reset
+        </button>
+      </div>
+
+      <!-- Result banner — hidden until simulation runs -->
+      <div id="sim-result" class="sim-result hidden">
+        <!-- JS fills: "Accepted ✓" or "Rejected ✗" -->
+      </div>
+
+      <!-- Step-by-step trace log -->
+      <div id="sim-trace" class="sim-trace">
+        <!-- JS appends <p> entries here during stepping -->
+      </div>
+    </section>
+
+    <!-- ── Alphabet display ─────────────────────────── -->
+    <section class="sidebar-section" id="section-alphabet">
+      <h2 class="section-title">Alphabet Σ</h2>
+      <!-- JS fills comma-separated symbols derived from all transitions -->
+      <p id="alphabet-display" class="alphabet-text">∅</p>
+    </section>
+
+  </aside><!-- end #sidebar -->
+
+
+  <!-- ============================================================
+       MAIN AREA — toolbar + SVG canvas
+       ============================================================ -->
+  <main id="main-area">
+
+    <!-- ── Toolbar ─────────────────────────────────── -->
+    <header id="toolbar">
+
+      <!-- LEFT: Edit-mode buttons (mutually exclusive) -->
+      <div class="toolbar-group" id="mode-group" role="group" aria-label="Editor mode">
+
+        <!-- SELECT mode: click to select/move states -->
+        <button id="btn-mode-select"
+                class="btn btn-tool active"
+                data-mode="select"
+                title="Select & Move states (S)">
+          ↖ Select
+        </button>
+
+        <!-- ADD STATE mode: click on canvas to create new state -->
+        <button id="btn-mode-add-state"
+                class="btn btn-tool"
+                data-mode="add-state"
+                title="Add State (A)">
+          ⊕ Add State
+        </button>
+
+        <!-- ADD TRANSITION mode: click source then target state -->
+        <button id="btn-mode-add-trans"
+                class="btn btn-tool"
+                data-mode="add-transition"
+                title="Add Transition (T)">
+          → Add Transition
+        </button>
+
+        <!-- DELETE mode: click any state or transition to remove it -->
+        <button id="btn-mode-delete"
+                class="btn btn-tool btn-danger-tool"
+                data-mode="delete"
+                title="Delete (D)">
+          ✕ Delete
+        </button>
+      </div>
+
+      <!-- RIGHT: Global action buttons -->
+      <div class="toolbar-group" id="action-group">
+
+        <!-- Export the DFA definition as JSON -->
+        <button id="btn-export" class="btn btn-ghost" title="Export DFA as JSON">
+          ↑ Export
+        </button>
+
+        <!-- Import a previously exported JSON -->
+        <button id="btn-import" class="btn btn-ghost" title="Import DFA from JSON">
+          ↓ Import
+        </button>
+
+        <!-- Hidden file input used by the Import button -->
+        <input id="import-file-input" type="file" accept=".json" hidden />
+
+        <!-- Wipe the whole canvas -->
+        <button id="btn-clear" class="btn btn-ghost" title="Clear all states and transitions">
+          🗑 Clear
+        </button>
+      </div>
+    </header><!-- end #toolbar -->
+
+    <!-- ── Canvas status bar ───────────────────────── -->
+    <div id="canvas-status-bar">
+      <!-- Hint text changes based on active mode; updated by JS -->
+      <span id="status-hint">Click on canvas to add states</span>
+      <!-- Current mode indicator -->
+      <span id="status-mode">MODE: Select</span>
+    </div>
+
+    <!-- ── SVG Canvas ───────────────────────────────── -->
+    <!--
+      The SVG element is where all DFA drawing happens.
+      - <defs>      stores reusable elements (arrowhead marker)
+      - #edges-layer  contains all <g class="edge"> transition arrows
+      - #nodes-layer  contains all <g class="node"> state circles
+      Layers are ordered so nodes always render above edges (click targets).
+    -->
+    <div id="canvas-wrap">
+      <svg id="dfa-canvas"
+           xmlns="http://www.w3.org/2000/svg"
+           role="img"
+           aria-label="DFA visual canvas">
+
+        <!-- ── Reusable SVG definitions ────────────── -->
+        <defs>
+          <!-- Standard arrowhead marker for transitions -->
+          <marker id="arrowhead"
+                  markerWidth="10" markerHeight="7"
+                  refX="9" refY="3.5"
+                  orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="arrow-fill" />
+          </marker>
+
+          <!-- Highlighted arrowhead used during simulation -->
+          <marker id="arrowhead-active"
+                  markerWidth="10" markerHeight="7"
+                  refX="9" refY="3.5"
+                  orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="arrow-fill-active" />
+          </marker>
+
+          <!-- Drop-shadow filter for selected / hovered states -->
+          <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <!-- Grid pattern for the canvas background (drawn via CSS background) -->
+
+        <!-- Layer 1: Transition arrows (rendered first so nodes sit on top) -->
+        <g id="edges-layer"></g>
+
+        <!-- Layer 2: State nodes (rendered on top of edges) -->
+        <g id="nodes-layer"></g>
+
+        <!-- Layer 3: Temporary line drawn while creating a new transition -->
+        <line id="temp-line"
+              class="temp-transition-line hidden"
+              x1="0" y1="0" x2="0" y2="0" />
+
+      </svg>
+    </div><!-- end #canvas-wrap -->
+
+  </main><!-- end #main-area -->
+
+</div><!-- end #app-wrapper -->
+
+
+<!-- ============================================================
+     MODAL: Add / Edit Transition
+     Shown when the user needs to enter the transition symbol.
+     JS toggles the .hidden class to show/hide it.
+     ============================================================ -->
+<div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true"
+     aria-labelledby="modal-title">
+  <div class="modal">
+    <h3 id="modal-title" class="modal-title">Add Transition</h3>
+
+    <!-- Display source → target so user knows the context -->
+    <p id="modal-desc" class="modal-desc"></p>
+
+    <!-- Symbol / label input -->
+    <label class="input-label" for="modal-symbol">Symbol (comma-separated for multiple)</label>
+    <input id="modal-symbol"
+           class="text-input"
+           type="text"
+           placeholder="e.g. a  or  a,b"
+           autocomplete="off" />
+
+    <div class="modal-buttons">
+      <button id="modal-confirm" class="btn btn-primary">Confirm</button>
+      <button id="modal-cancel"  class="btn btn-ghost">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     MODAL: State Name Editor
+     Shown when user double-clicks an existing state to rename it
+     or toggle initial / accepting properties.
+     ============================================================ -->
+<div id="modal-state-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true"
+     aria-labelledby="modal-state-title">
+  <div class="modal">
+    <h3 id="modal-state-title" class="modal-title">Edit State</h3>
+
+    <!-- State label / name -->
+    <label class="input-label" for="modal-state-name">State Name</label>
+    <input id="modal-state-name"
+           class="text-input"
+           type="text"
+           placeholder="e.g. q0" />
+
+    <!-- Toggle: initial state (only one allowed in a DFA) -->
+    <label class="checkbox-label">
+      <input id="modal-state-initial" type="checkbox" />
+      Initial state (start state)
+    </label>
+
+    <!-- Toggle: accepting / final state -->
+    <label class="checkbox-label">
+      <input id="modal-state-accepting" type="checkbox" />
+      Accepting state (final state)
+    </label>
+
+    <div class="modal-buttons">
+      <button id="modal-state-confirm" class="btn btn-primary">Save</button>
+      <button id="modal-state-cancel"  class="btn btn-ghost">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================================
+     Toast Notification
+     A small pop-up at the bottom-right for ephemeral messages.
+     JS sets textContent and removes .hidden to show it.
+     ============================================================ -->
+<div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
+
+
+<!-- ============================================================
+     Main script — loaded at end of <body> so the entire DOM
+     is parsed before any JS runs (no need for DOMContentLoaded).
+     ============================================================ -->
+<script src="script.js"></script>
+
+</body>
+</html>

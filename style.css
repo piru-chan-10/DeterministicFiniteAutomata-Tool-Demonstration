@@ -1,0 +1,946 @@
+/* ============================================================
+   DFA EDITOR — style.css
+   ============================================================
+   Table of Contents
+   -----------------
+   1.  CSS Custom Properties (Design Tokens)
+   2.  CSS Reset & Base
+   3.  Layout — App Wrapper, Sidebar, Main Area
+   4.  Sidebar — Brand, Sections, Lists, Badges
+   5.  Toolbar
+   6.  Canvas Status Bar
+   7.  SVG Canvas
+   8.  SVG Node (State) Styles
+   9.  SVG Edge (Transition) Styles
+  10.  Modals
+  11.  Form Elements (inputs, checkboxes)
+  12.  Buttons
+  13.  Simulation Panel
+  14.  Toast Notification
+  15.  Utility Classes
+  16.  Animations & Keyframes
+  17.  Scrollbar Theming
+   ============================================================ */
+
+
+/* ============================================================
+   1. CSS CUSTOM PROPERTIES (Design Tokens)
+   All colors, spacing, and typographic values live here.
+   Change a value in :root and it propagates everywhere.
+   ============================================================ */
+:root {
+  /* ── Color Palette ────────────────────────────────── */
+  --clr-bg-deep:       #0d0f1a;   /* darkest background (app bg) */
+  --clr-bg-mid:        #141629;   /* sidebar background */
+  --clr-bg-surface:    #1c1f38;   /* card / panel surfaces */
+  --clr-bg-hover:      #252847;   /* hover state for list items */
+  --clr-bg-canvas:     #11132200; /* canvas area — mostly transparent */
+
+  /* Primary accent — vivid indigo/violet */
+  --clr-primary:       #7c6ff7;
+  --clr-primary-dark:  #5a52d5;
+  --clr-primary-glow:  rgba(124, 111, 247, 0.35);
+
+  /* Secondary accent — cyan for active simulation */
+  --clr-active:        #38bdf8;
+  --clr-active-glow:   rgba(56, 189, 248, 0.4);
+
+  /* Semantic colours */
+  --clr-accept:        #22c55e;   /* accepting states (green) */
+  --clr-accept-glow:   rgba(34, 197, 94, 0.35);
+  --clr-reject:        #ef4444;   /* rejection result (red) */
+  --clr-danger:        #f87171;   /* delete mode highlight */
+  --clr-warning:       #fbbf24;   /* initial state arrow (yellow) */
+
+  /* Text */
+  --clr-text-primary:  #e8eaf6;
+  --clr-text-secondary:#a0a8d0;
+  --clr-text-muted:    #5b6494;
+
+  /* Borders */
+  --clr-border:        #2a2f55;
+  --clr-border-focus:  var(--clr-primary);
+
+  /* ── Spacing Scale ────────────────────────────────── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* ── Typography ───────────────────────────────────── */
+  --font-ui:   'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* ── Radii ────────────────────────────────────────── */
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  16px;
+  --radius-full: 9999px;
+
+  /* ── Transitions ──────────────────────────────────── */
+  --transition-fast:  150ms ease;
+  --transition-base:  250ms ease;
+  --transition-slow:  400ms ease;
+
+  /* ── Shadows ──────────────────────────────────────── */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg:  0 8px 32px rgba(0,0,0,0.6);
+
+  /* ── Sidebar width ────────────────────────────────── */
+  --sidebar-width: 260px;
+
+  /* ── Toolbar height ───────────────────────────────── */
+  --toolbar-height: 56px;
+
+  /* ── Status bar height ────────────────────────────── */
+  --statusbar-height: 32px;
+}
+
+
+/* ============================================================
+   2. CSS RESET & BASE
+   Normalise browser defaults so the design is consistent.
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;                 /* prevent page-level scroll */
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  background: var(--clr-bg-deep);
+  color: var(--clr-text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+ul {
+  list-style: none;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+  outline: none;
+}
+
+input {
+  font-family: inherit;
+}
+
+svg {
+  display: block;
+}
+
+
+/* ============================================================
+   3. LAYOUT — App Wrapper, Sidebar, Main Area
+   The app is a full-viewport horizontal flex container:
+     [sidebar | main-area]
+   ============================================================ */
+
+/* Root container — fills the entire viewport */
+#app-wrapper {
+  display: flex;
+  width:  100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Sidebar occupies a fixed width on the left */
+#sidebar {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  height: 100%;
+  background: var(--clr-bg-mid);
+  border-right: 1px solid var(--clr-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;      /* sidebar scrolls independently */
+  overflow-x: hidden;
+  gap: 0;
+}
+
+/* Main area takes up all remaining space */
+#main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;          /* prevents flex children from overflowing */
+  height: 100%;
+  background: var(--clr-bg-deep);
+}
+
+
+/* ============================================================
+   4. SIDEBAR — Brand, Sections, Lists, Badges
+   ============================================================ */
+
+/* Brand logo row at the top of the sidebar */
+#sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-5) var(--sp-4);
+  border-bottom: 1px solid var(--clr-border);
+  background: linear-gradient(
+    135deg,
+    var(--clr-bg-surface) 0%,
+    var(--clr-bg-mid) 100%
+  );
+}
+
+/* Hexagonal icon next to brand name */
+.brand-icon {
+  font-size: 24px;
+  color: var(--clr-primary);
+  filter: drop-shadow(0 0 6px var(--clr-primary-glow));
+  line-height: 1;
+}
+
+.brand-text {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: linear-gradient(90deg, var(--clr-primary), var(--clr-active));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Sidebar sections (States, Transitions, Simulate…) ── */
+.sidebar-section {
+  padding: var(--sp-4);
+  border-bottom: 1px solid var(--clr-border);
+}
+
+/* Section header row — title + optional badge */
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--clr-text-muted);
+  margin-bottom: var(--sp-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Badge — shows count of states / transitions */
+.badge {
+  background: var(--clr-primary);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ── Item lists (states & transitions) ── */
+.item-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  max-height: 160px;     /* limit height; list scrolls if needed */
+  overflow-y: auto;
+}
+
+/* Individual list row */
+.state-item,
+.trans-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--clr-bg-surface);
+  font-size: 12px;
+  color: var(--clr-text-secondary);
+  gap: var(--sp-2);
+  transition: background var(--transition-fast),
+              color var(--transition-fast);
+  cursor: default;
+}
+
+.state-item:hover,
+.trans-item:hover {
+  background: var(--clr-bg-hover);
+  color: var(--clr-text-primary);
+}
+
+/* Small tag pills shown on state rows (e.g. "start", "accept") */
+.tag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.6px;
+}
+
+.tag-initial  { background: var(--clr-warning);  color: #000; }
+.tag-accepting{ background: var(--clr-accept);   color: #000; }
+
+/* Alphabet text in the Σ section */
+.alphabet-text {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--clr-active);
+  word-break: break-all;
+  letter-spacing: 1px;
+}
+
+
+/* ============================================================
+   5. TOOLBAR
+   Horizontal bar at the top of the main area.
+   Contains mode toggle buttons on the left, action buttons right.
+   ============================================================ */
+#toolbar {
+  height: var(--toolbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--sp-5);
+  background: var(--clr-bg-surface);
+  border-bottom: 1px solid var(--clr-border);
+  gap: var(--sp-4);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;          /* toolbar never shrinks */
+}
+
+/* Groups of buttons within the toolbar */
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+
+/* ============================================================
+   6. CANVAS STATUS BAR
+   Thin bar below the toolbar showing current mode hint.
+   ============================================================ */
+#canvas-status-bar {
+  height: var(--statusbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--sp-5);
+  background: var(--clr-bg-deep);
+  border-bottom: 1px solid var(--clr-border);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+#status-hint {
+  color: var(--clr-text-secondary);
+}
+
+/* Mode badge in the status bar — accent-coloured */
+#status-mode {
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--clr-primary);
+  background: var(--clr-primary-glow);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+}
+
+
+/* ============================================================
+   7. SVG CANVAS
+   The canvas-wrap div fills remaining space and clips overflow.
+   The SVG inside expands to fill that div.
+   ============================================================ */
+#canvas-wrap {
+  flex: 1;                 /* fill all vertical space under toolbar */
+  overflow: hidden;
+  position: relative;
+  /* Subtle dot-grid background using radial-gradient */
+  background-color: var(--clr-bg-deep);
+  background-image:
+    radial-gradient(circle, #2a2f5599 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* The SVG element itself */
+#dfa-canvas {
+  width:  100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;       /* default cursor on the drawing area */
+}
+
+/* Cursor overrides based on current editor mode */
+#dfa-canvas.mode-select     { cursor: default;    }
+#dfa-canvas.mode-add-state  { cursor: crosshair;  }
+#dfa-canvas.mode-add-trans  { cursor: cell;       }
+#dfa-canvas.mode-delete     { cursor: not-allowed;}
+
+
+/* ============================================================
+   8. SVG NODE (STATE) STYLES
+   Each state is a <g class="node"> containing:
+     - <circle class="state-circle">   outer ring
+     - <circle class="accept-ring">    second ring for accepting states
+     - <text>                          state label
+   ============================================================ */
+
+/* Outer group — cursor & transition on hover */
+.node {
+  cursor: pointer;
+}
+
+.node:hover .state-circle {
+  filter: url(#glow);
+}
+
+/* Main state circle */
+.state-circle {
+  fill:   var(--clr-bg-surface);
+  stroke: var(--clr-primary);
+  stroke-width: 2.5;
+  transition: stroke var(--transition-fast),
+              fill   var(--transition-fast);
+}
+
+/* Inner double-circle for accepting (final) states */
+.accept-ring {
+  fill:         none;
+  stroke:       var(--clr-accept);
+  stroke-width: 2;
+  opacity: 0;              /* hidden by default */
+  transition: opacity var(--transition-fast),
+              stroke  var(--transition-fast);
+}
+
+/* Show the accept ring when .accepting class is on the node group */
+.node.accepting .accept-ring {
+  opacity: 1;
+}
+
+/* Accepting state also tints the main circle */
+.node.accepting .state-circle {
+  stroke: var(--clr-accept);
+}
+
+/* State label text */
+.state-label {
+  fill: var(--clr-text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;    /* text shouldn't capture mouse events */
+  user-select: none;
+}
+
+/* ── Selected state (in Select mode after clicking) ── */
+.node.selected .state-circle {
+  stroke: var(--clr-active);
+  stroke-width: 3;
+  filter: url(#glow);
+}
+
+/* ── Active state during simulation ── */
+.node.sim-active .state-circle {
+  fill: var(--clr-primary-glow);
+  stroke: var(--clr-active);
+  stroke-width: 3;
+  filter: url(#glow);
+}
+
+/* ── Initial state — small incoming arrow decoration ── */
+/* The arrow is drawn by JS as an SVG <line> + <polygon> */
+.initial-arrow {
+  stroke: var(--clr-warning);
+  stroke-width: 2.5;
+  fill: none;
+  marker-end: url(#arrowhead);
+}
+
+/* ── Delete mode hover ── */
+#dfa-canvas.mode-delete .node:hover .state-circle {
+  stroke: var(--clr-danger);
+  fill: rgba(248, 113, 113, 0.15);
+}
+
+
+/* ============================================================
+   9. SVG EDGE (TRANSITION) STYLES
+   Each transition is a <g class="edge"> containing:
+     - <path>   the curved (or straight) arrow line
+     - <text>   the transition symbol label
+   ============================================================ */
+
+/* Edge group */
+.edge {
+  cursor: pointer;
+}
+
+/* Arrow path (stroke only, no fill) */
+.edge-path {
+  fill: none;
+  stroke: var(--clr-text-muted);
+  stroke-width: 2;
+  marker-end: url(#arrowhead);
+  transition: stroke var(--transition-fast);
+}
+
+.edge:hover .edge-path {
+  stroke: var(--clr-primary);
+}
+
+/* Transition symbol label */
+.edge-label {
+  fill: var(--clr-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  text-anchor: middle;
+  pointer-events: none;
+  user-select: none;
+  transition: fill var(--transition-fast);
+}
+
+.edge:hover .edge-label {
+  fill: var(--clr-primary);
+}
+
+/* ── Active transition during simulation ── */
+.edge.sim-active .edge-path {
+  stroke: var(--clr-active);
+  stroke-width: 3;
+  marker-end: url(#arrowhead-active);
+}
+.edge.sim-active .edge-label {
+  fill: var(--clr-active);
+  font-weight: 700;
+}
+
+/* ── Delete mode hover on edges ── */
+#dfa-canvas.mode-delete .edge:hover .edge-path {
+  stroke: var(--clr-danger);
+  stroke-width: 3;
+}
+#dfa-canvas.mode-delete .edge:hover .edge-label {
+  fill: var(--clr-danger);
+}
+
+/* Arrowhead polygon fill colours (referenced from <defs>) */
+.arrow-fill        { fill: var(--clr-text-muted); }
+.arrow-fill-active { fill: var(--clr-active);      }
+
+/* Temporary line shown while dragging a new transition */
+.temp-transition-line {
+  stroke: var(--clr-primary);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  pointer-events: none;    /* don't block mouse events on canvas */
+}
+
+
+/* ============================================================
+   10. MODALS
+   Two modals exist:
+     #modal-overlay        — for adding/editing transitions
+     #modal-state-overlay  — for editing state properties
+   Both share the same .modal-overlay / .modal classes.
+   ============================================================ */
+
+/* Dark semi-transparent backdrop */
+.modal-overlay {
+  position: fixed;
+  inset: 0;                /* shorthand for top/right/bottom/left = 0 */
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn var(--transition-fast) ease;
+}
+
+/* Modal card */
+.modal {
+  background: var(--clr-bg-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-6);
+  width: 360px;
+  max-width: calc(100vw - 40px);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  animation: slideUp var(--transition-base) ease;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--clr-text-primary);
+}
+
+.modal-desc {
+  font-size: 13px;
+  color: var(--clr-text-secondary);
+  font-family: var(--font-mono);
+}
+
+.modal-buttons {
+  display: flex;
+  gap: var(--sp-3);
+  justify-content: flex-end;
+  margin-top: var(--sp-2);
+}
+
+
+/* ============================================================
+   11. FORM ELEMENTS
+   ============================================================ */
+
+/* Generic label above an input */
+.input-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--clr-text-muted);
+  margin-bottom: var(--sp-1);
+}
+
+/* Text / number input field */
+.text-input {
+  width: 100%;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--clr-bg-mid);
+  border: 1.5px solid var(--clr-border);
+  border-radius: var(--radius-sm);
+  color: var(--clr-text-primary);
+  font-size: 14px;
+  font-family: var(--font-mono);
+  transition: border-color var(--transition-fast),
+              box-shadow   var(--transition-fast);
+  outline: none;
+}
+
+.text-input:focus {
+  border-color: var(--clr-border-focus);
+  box-shadow: 0 0 0 3px var(--clr-primary-glow);
+}
+
+.text-input::placeholder {
+  color: var(--clr-text-muted);
+}
+
+/* Checkbox + label on the same line */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 13px;
+  color: var(--clr-text-secondary);
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  accent-color: var(--clr-primary);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+
+/* ============================================================
+   12. BUTTONS
+   Button variants:
+     .btn             — base styles
+     .btn-primary     — filled accent
+     .btn-secondary   — outlined accent
+     .btn-ghost       — subtle / transparent
+     .btn-tool        — toolbar mode toggle
+     .btn-danger-tool — delete mode (red accent)
+   ============================================================ */
+
+/* Base button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  transition: background    var(--transition-fast),
+              color         var(--transition-fast),
+              border-color  var(--transition-fast),
+              box-shadow    var(--transition-fast),
+              transform     var(--transition-fast);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+/* Primary — filled indigo */
+.btn-primary {
+  background: var(--clr-primary);
+  color: white;
+}
+.btn-primary:hover {
+  background: var(--clr-primary-dark);
+  box-shadow: 0 0 12px var(--clr-primary-glow);
+}
+
+/* Secondary — outlined */
+.btn-secondary {
+  background: transparent;
+  color: var(--clr-primary);
+  border: 1.5px solid var(--clr-primary);
+}
+.btn-secondary:hover {
+  background: var(--clr-primary-glow);
+}
+
+/* Ghost — minimal */
+.btn-ghost {
+  background: transparent;
+  color: var(--clr-text-secondary);
+  border: 1.5px solid var(--clr-border);
+}
+.btn-ghost:hover {
+  background: var(--clr-bg-hover);
+  color: var(--clr-text-primary);
+  border-color: var(--clr-text-muted);
+}
+
+/* Tool button (toolbar mode switcher) */
+.btn-tool {
+  background: var(--clr-bg-deep);
+  color: var(--clr-text-secondary);
+  border: 1.5px solid var(--clr-border);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: 12px;
+}
+.btn-tool:hover {
+  background: var(--clr-bg-hover);
+  color: var(--clr-text-primary);
+}
+
+/* Active tool — highlighted with primary accent */
+.btn-tool.active {
+  background: var(--clr-primary-glow);
+  color: var(--clr-primary);
+  border-color: var(--clr-primary);
+  box-shadow: 0 0 8px var(--clr-primary-glow);
+}
+
+/* Delete mode button */
+.btn-danger-tool {
+  color: var(--clr-danger);
+  border-color: rgba(248,113,113,0.3);
+}
+.btn-danger-tool:hover {
+  background: rgba(248,113,113,0.1);
+}
+.btn-danger-tool.active {
+  background: rgba(248,113,113,0.15);
+  border-color: var(--clr-danger);
+  box-shadow: 0 0 8px rgba(248,113,113,0.3);
+}
+
+
+/* ============================================================
+   13. SIMULATION PANEL
+   Inside the sidebar's #section-simulate section.
+   ============================================================ */
+
+/* Row of simulation action buttons */
+.sim-buttons {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: var(--sp-2);
+}
+
+/* Result banner — shows "Accepted" or "Rejected" */
+.sim-result {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+  letter-spacing: 0.5px;
+  margin-top: var(--sp-2);
+  animation: popIn var(--transition-base) ease;
+}
+
+.sim-result.accepted {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--clr-accept);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.sim-result.rejected {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--clr-reject);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Step-by-step trace log box */
+.sim-trace {
+  margin-top: var(--sp-3);
+  max-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Individual trace entry */
+.sim-trace p {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--clr-text-muted);
+  padding: 2px 0;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+/* Latest (most recent) trace entry highlighted */
+.sim-trace p.latest {
+  color: var(--clr-active);
+  font-weight: 600;
+}
+
+
+/* ============================================================
+   14. TOAST NOTIFICATION
+   Floats in the bottom-right corner.
+   JS adds .show to animate it in, removes it after a timeout.
+   ============================================================ */
+.toast {
+  position: fixed;
+  bottom: var(--sp-6);
+  right: var(--sp-6);
+  background: var(--clr-bg-surface);
+  border: 1px solid var(--clr-border);
+  color: var(--clr-text-primary);
+  padding: var(--sp-3) var(--sp-5);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  box-shadow: var(--shadow-md);
+  z-index: 2000;
+  pointer-events: none;     /* doesn't block clicks */
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity      var(--transition-base),
+              transform    var(--transition-base);
+}
+
+/* .show class triggers the slide-up animation */
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+/* ============================================================
+   15. UTILITY CLASSES
+   Small single-purpose classes reused throughout the HTML.
+   ============================================================ */
+
+/* Hide an element completely (visibility + layout) */
+.hidden {
+  display: none !important;
+}
+
+/* Visually hidden but screen-reader accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+}
+
+
+/* ============================================================
+   16. ANIMATIONS & KEYFRAMES
+   ============================================================ */
+
+/* Modal backdrop fade */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Modal card slide up */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* Sim-result banner pop */
+@keyframes popIn {
+  0%   { transform: scale(0.92); opacity: 0; }
+  60%  { transform: scale(1.04);             }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+/* Pulse animation for the sim-active state node */
+@keyframes pulse {
+  0%   { stroke-width: 3; }
+  50%  { stroke-width: 5; }
+  100% { stroke-width: 3; }
+}
+
+/* Apply pulse to actively simulated state */
+.node.sim-active .state-circle {
+  animation: pulse 1s ease infinite;
+}
+
+
+/* ============================================================
+   17. SCROLLBAR THEMING
+   Style the thin custom scrollbars in the sidebar lists.
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--clr-border);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--clr-text-muted);
+}
